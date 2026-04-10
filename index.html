@@ -592,6 +592,7 @@
       monthly: "kakeibo_monthly",
       sync: "kakeibo_sync_config"
     };
+    const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwDbijEaNDIWmmtQfyA7uU9I7AwzAPCf5svcxOxnJauBUXPa6evMVVYTOPvj9XwE22Fpw/exec";
 
     const PAYMENT_METHODS = ["共通カード", "共通デビット", "大悟", "果林"];
     const CATEGORIES = ["食費", "交通費", "宿泊", "娯楽", "その他"];
@@ -609,7 +610,8 @@
       selectedMonth: "",
       focusDate: "",
       paymentFilter: "all",
-      chart: null
+      chart: null,
+      lastAutoRefreshAt: 0
     };
 
     const elements = {
@@ -676,7 +678,7 @@
 
       bindEvents();
       syncSplitTypeByPaymentMethod();
-      await refreshFromSheets(false);
+      await autoRefreshSharedData();
       renderAll();
     }
 
@@ -694,6 +696,12 @@
       elements.exportMonthBtn.addEventListener("click", exportCurrentMonthCsv);
       elements.exportAllBtn.addEventListener("click", exportAllCsv);
       elements.exportBudgetBtn.addEventListener("click", exportBudgetCsv);
+      window.addEventListener("focus", () => autoRefreshSharedData());
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          autoRefreshSharedData();
+        }
+      });
 
       elements.tabs.forEach((button) => {
         button.addEventListener("click", () => switchTab(button.dataset.tab));
@@ -724,14 +732,33 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEYS.sync);
         const parsed = raw ? JSON.parse(raw) : {};
+        const webAppUrl = parsed.webAppUrl || DEFAULT_WEB_APP_URL;
         return {
-          webAppUrl: parsed.webAppUrl || "",
+          webAppUrl,
           lastSyncedAt: parsed.lastSyncedAt || "",
-          lastStatus: parsed.lastStatus || "未設定"
+          lastStatus: parsed.lastStatus || (webAppUrl ? "設定済み" : "未設定")
         };
       } catch (error) {
-        return { webAppUrl: "", lastSyncedAt: "", lastStatus: "未設定" };
+        return {
+          webAppUrl: DEFAULT_WEB_APP_URL,
+          lastSyncedAt: "",
+          lastStatus: DEFAULT_WEB_APP_URL ? "設定済み" : "未設定"
+        };
       }
+    }
+
+    async function autoRefreshSharedData() {
+      if (!state.syncConfig.webAppUrl) {
+        return false;
+      }
+
+      const now = Date.now();
+      if (now - state.lastAutoRefreshAt < 15000) {
+        return false;
+      }
+
+      state.lastAutoRefreshAt = now;
+      return refreshFromSheets(false);
     }
 
     function saveRecords() {
