@@ -1157,14 +1157,15 @@
 
       try {
         const data = await fetchSharedDataJsonp(state.syncConfig.webAppUrl);
+        const sharedPayload = normalizeSharedPayload(data);
 
-        if (Array.isArray(data.records)) {
-          state.records = data.records.map(normalizeRecordItem);
+        if (sharedPayload.records.length > 0) {
+          state.records = sharedPayload.records;
           saveRecords();
         }
 
-        if (Array.isArray(data.monthly)) {
-          state.monthly = data.monthly.map(normalizeMonthlyItem);
+        if (sharedPayload.monthly.length > 0) {
+          state.monthly = sharedPayload.monthly;
           saveMonthly();
         }
 
@@ -1215,6 +1216,44 @@
         script.src = url.toString();
         document.body.appendChild(script);
       });
+    }
+
+    function normalizeSharedPayload(payload) {
+      const records = extractSharedRecords(payload);
+      const monthly = extractSharedMonthly(payload);
+
+      return {
+        records,
+        monthly
+      };
+    }
+
+    function extractSharedRecords(payload) {
+      if (Array.isArray(payload?.records)) {
+        return payload.records.map(normalizeRecordItem);
+      }
+
+      if (Array.isArray(payload?.sheetRecords)) {
+        return payload.sheetRecords.map(normalizeSheetRecordItem).filter(Boolean);
+      }
+
+      if (Array.isArray(payload?.rows)) {
+        return payload.rows.map(normalizeSheetRecordItem).filter(Boolean);
+      }
+
+      return [];
+    }
+
+    function extractSharedMonthly(payload) {
+      if (Array.isArray(payload?.monthly)) {
+        return payload.monthly.map(normalizeMonthlyItem);
+      }
+
+      if (Array.isArray(payload?.sheetMonthly)) {
+        return payload.sheetMonthly.map(normalizeMonthlyItem);
+      }
+
+      return [];
     }
 
     function exportCurrentMonthCsv() {
@@ -1293,6 +1332,76 @@
         amount: Number(item.amount) || 0,
         splitType: String(item.splitType || "割り勘")
       };
+    }
+
+    function normalizeSheetRecordItem(item) {
+      if (Array.isArray(item)) {
+        const [date, paymentMethod, category, detail, splitAmount, daigoAmount, karinAmount] = item;
+        const amount = Number(splitAmount || daigoAmount || karinAmount || 0);
+        const splitType = Number(splitAmount) > 0
+          ? "割り勘"
+          : Number(daigoAmount) > 0
+            ? "大悟個別"
+            : Number(karinAmount) > 0
+              ? "果林個別"
+              : "割り勘";
+
+        if (!date || !paymentMethod || !category || amount <= 0) {
+          return null;
+        }
+
+        return normalizeRecordItem({
+          id: buildSheetDerivedId(date, paymentMethod, category, detail, amount, splitType),
+          date,
+          paymentMethod,
+          category,
+          detail: detail || "",
+          amount,
+          splitType
+        });
+      }
+
+      if (item && typeof item === "object") {
+        const splitAmount = Number(item.splitAmount || item.split || item.warikan || 0);
+        const daigoAmount = Number(item.daigoAmount || item.daigo || 0);
+        const karinAmount = Number(item.karinAmount || item.karin || 0);
+        const amount = Number(item.amount || splitAmount || daigoAmount || karinAmount || 0);
+        const splitType = item.splitType
+          || (splitAmount > 0
+            ? "割り勘"
+            : daigoAmount > 0
+              ? "大悟個別"
+              : karinAmount > 0
+                ? "果林個別"
+                : "割り勘");
+
+        if (!item.date || !item.paymentMethod || !item.category || amount <= 0) {
+          return null;
+        }
+
+        return normalizeRecordItem({
+          id: item.id || buildSheetDerivedId(item.date, item.paymentMethod, item.category, item.detail, amount, splitType),
+          date: item.date,
+          paymentMethod: item.paymentMethod,
+          category: item.category,
+          detail: item.detail || "",
+          amount,
+          splitType
+        });
+      }
+
+      return null;
+    }
+
+    function buildSheetDerivedId(date, paymentMethod, category, detail, amount, splitType) {
+      return [
+        date || "",
+        paymentMethod || "",
+        category || "",
+        detail || "",
+        Number(amount || 0),
+        splitType || ""
+      ].join("||");
     }
 
     function syncSplitTypeByPaymentMethod() {
