@@ -351,6 +351,7 @@
       <button class="tab-button active" data-tab="dashboard">ダッシュボード</button>
       <button class="tab-button" data-tab="input">入力</button>
       <button class="tab-button" data-tab="list">一覧</button>
+      <button class="tab-button" data-tab="shared">利用中シート</button>
       <button class="tab-button" data-tab="sync">同期・設定</button>
     </nav>
 
@@ -540,6 +541,43 @@
       </article>
     </section>
 
+    <section class="tab-panel" id="tab-shared">
+      <article class="card">
+        <div class="toolbar" style="margin-bottom:14px;">
+          <div>
+            <h2 style="margin-bottom:4px;">利用中シート確認</h2>
+            <div class="muted">月に関係なく、現在の「（利用中）」シート内容をそのまま確認できます。</div>
+          </div>
+          <div class="actions" style="margin-left:auto;">
+            <button type="button" class="btn btn-secondary" id="refreshSharedSheetBtn">最新を読込</button>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-bottom:16px;">
+          <div class="line"><span>読込件数</span><span id="sharedSheetCount">0件</span></div>
+          <div class="line"><span>シート上の予算額</span><span id="sharedSheetBudget">¥0</span></div>
+          <div class="line"><span>対象月の目安</span><span id="sharedSheetMonth">-</span></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>支払い方法</th>
+                <th>カテゴリ</th>
+                <th>詳細</th>
+                <th>割り勘</th>
+                <th>大悟個別</th>
+                <th>果林個別</th>
+              </tr>
+            </thead>
+            <tbody id="sharedSheetTableBody"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
     <section class="tab-panel" id="tab-sync">
       <div class="grid grid-2">
         <article class="card">
@@ -606,6 +644,11 @@
         lastSyncedAt: "",
         lastStatus: "未設定"
       },
+      sharedSheetRows: [],
+      sharedSheetSummary: {
+        month: "",
+        budget: 0
+      },
       currentTab: "dashboard",
       selectedMonth: "",
       focusDate: "",
@@ -639,6 +682,7 @@
       exportMonthBtn: document.getElementById("exportMonthBtn"),
       exportAllBtn: document.getElementById("exportAllBtn"),
       exportBudgetBtn: document.getElementById("exportBudgetBtn"),
+      refreshSharedSheetBtn: document.getElementById("refreshSharedSheetBtn"),
       recordError: document.getElementById("recordError"),
       budgetError: document.getElementById("budgetError"),
       syncError: document.getElementById("syncError"),
@@ -653,6 +697,10 @@
       recentList: document.getElementById("recentList"),
       categoryChart: document.getElementById("categoryChart"),
       recordTableBody: document.getElementById("recordTableBody"),
+      sharedSheetTableBody: document.getElementById("sharedSheetTableBody"),
+      sharedSheetCount: document.getElementById("sharedSheetCount"),
+      sharedSheetBudget: document.getElementById("sharedSheetBudget"),
+      sharedSheetMonth: document.getElementById("sharedSheetMonth"),
       listCountText: document.getElementById("listCountText"),
       syncMonthBudget: document.getElementById("syncMonthBudget"),
       syncMonthSpent: document.getElementById("syncMonthSpent"),
@@ -692,6 +740,7 @@
       elements.paymentFilter.addEventListener("change", handlePaymentFilterChange);
       elements.paymentMethod.addEventListener("change", syncSplitTypeByPaymentMethod);
       elements.refreshSharedBtn.addEventListener("click", () => refreshFromSheets(true));
+      elements.refreshSharedSheetBtn.addEventListener("click", () => refreshFromSheets(true));
       elements.syncNowBtn.addEventListener("click", () => syncToSheets(true));
       elements.exportMonthBtn.addEventListener("click", exportCurrentMonthCsv);
       elements.exportAllBtn.addEventListener("click", exportAllCsv);
@@ -784,6 +833,7 @@
     async function handleRecordSubmit(event) {
       event.preventDefault();
       elements.recordError.textContent = "";
+      await refreshFromSheets(false);
 
       const record = {
         id: createId(),
@@ -820,6 +870,7 @@
     async function handleBudgetSubmit(event) {
       event.preventDefault();
       elements.budgetError.textContent = "";
+      await refreshFromSheets(false);
 
       const budgetDate = elements.budgetDate.value;
       const dailyBudgetAmount = Number(elements.dailyBudgetAmount.value);
@@ -905,6 +956,10 @@
       if (tabName === "dashboard") {
         renderChart();
       }
+
+      if (tabName === "shared") {
+        autoRefreshSharedData();
+      }
     }
 
     function renderAll() {
@@ -913,6 +968,7 @@
       renderDashboard();
       renderRecentList();
       renderRecordTable();
+      renderSharedSheetPanel();
       renderBudgetFormValues();
       renderSyncPanel();
 
@@ -1032,6 +1088,38 @@
       elements.monthlyBudgetAmount.value = monthInfo.budget || "";
     }
 
+    function renderSharedSheetPanel() {
+      const rows = state.sharedSheetRows.length > 0
+        ? state.sharedSheetRows
+        : getSortedRecords(state.records).map(convertRecordToSharedRow);
+
+      elements.sharedSheetTableBody.innerHTML = "";
+      elements.sharedSheetCount.textContent = `${rows.length}件`;
+      elements.sharedSheetBudget.textContent = formatCurrency(Number(state.sharedSheetSummary.budget || 0));
+      elements.sharedSheetMonth.textContent = state.sharedSheetSummary.month || "-";
+
+      if (rows.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = '<td colspan="7">共有シートの読込データがありません。</td>';
+        elements.sharedSheetTableBody.appendChild(row);
+        return;
+      }
+
+      rows.forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${formatDate(item.date)}</td>
+          <td>${escapeHtml(item.paymentMethod || "-")}</td>
+          <td>${escapeHtml(item.category || "-")}</td>
+          <td>${escapeHtml(item.detail || "-")}</td>
+          <td>${item.splitAmount > 0 ? formatCurrency(item.splitAmount) : "-"}</td>
+          <td>${item.daigoAmount > 0 ? formatCurrency(item.daigoAmount) : "-"}</td>
+          <td>${item.karinAmount > 0 ? formatCurrency(item.karinAmount) : "-"}</td>
+        `;
+        elements.sharedSheetTableBody.appendChild(row);
+      });
+    }
+
     function renderSyncPanel() {
       const monthInfo = getMonthlyInfo(state.selectedMonth);
       const monthSpent = sumAmounts(getRecordsByMonth(state.selectedMonth));
@@ -1097,6 +1185,7 @@
     }
 
     async function deleteRecord(id) {
+      await refreshFromSheets(false);
       state.records = state.records.filter((record) => record.id !== id);
       saveRecords();
       renderAll();
@@ -1120,6 +1209,8 @@
       const payload = {
         records: getSortedRecords([...state.records]),
         monthly: [...state.monthly].sort((a, b) => a.month.localeCompare(b.month)),
+        selectedMonth: state.selectedMonth,
+        focusDate: state.focusDate,
         exportedAt: new Date().toISOString()
       };
 
@@ -1159,15 +1250,18 @@
         const data = await fetchSharedDataJsonp(state.syncConfig.webAppUrl);
         const sharedPayload = normalizeSharedPayload(data);
 
-        if (sharedPayload.records.length > 0) {
+        if (sharedPayload.hasRecords) {
           state.records = sharedPayload.records;
           saveRecords();
         }
 
-        if (sharedPayload.monthly.length > 0) {
+        if (sharedPayload.hasMonthly) {
           state.monthly = sharedPayload.monthly;
           saveMonthly();
         }
+
+        state.sharedSheetRows = sharedPayload.sharedSheetRows;
+        state.sharedSheetSummary = sharedPayload.sharedSheetSummary;
 
         state.syncConfig.lastStatus = "共有データ読込済み";
         state.syncConfig.lastSyncedAt = new Date().toLocaleString("ja-JP");
@@ -1219,52 +1313,99 @@
     }
 
     function normalizeSharedPayload(payload) {
-      const records = extractSharedRecords(payload);
-      const monthly = extractSharedMonthly(payload);
+      const recordResult = extractSharedRecords(payload);
+      const monthlyResult = extractSharedMonthly(payload);
 
       return {
-        records,
-        monthly
+        records: recordResult.items,
+        hasRecords: recordResult.found,
+        monthly: monthlyResult.items,
+        hasMonthly: monthlyResult.found,
+        sharedSheetRows: extractSharedSheetRows(payload, recordResult.items),
+        sharedSheetSummary: extractSharedSheetSummary(payload)
+      };
+    }
+
+    function extractSharedSheetRows(payload, normalizedRecords) {
+      if (Array.isArray(payload?.rows)) {
+        return payload.rows.map(normalizeSharedSheetRow).filter(Boolean);
+      }
+
+      if (Array.isArray(payload?.sheetRecords)) {
+        return payload.sheetRecords.map(normalizeSharedSheetRow).filter(Boolean);
+      }
+
+      return normalizedRecords.map(convertRecordToSharedRow);
+    }
+
+    function extractSharedSheetSummary(payload) {
+      return {
+        month: inferSummaryMonth(payload),
+        budget: Number(payload?.sheetSummary?.budget || 0)
       };
     }
 
     function extractSharedRecords(payload) {
       if (Array.isArray(payload?.records)) {
-        return payload.records.map(normalizeRecordItem);
+        return {
+          items: payload.records.map(normalizeRecordItem),
+          found: true
+        };
       }
 
       if (Array.isArray(payload?.sheetRecords)) {
-        return payload.sheetRecords.map(normalizeSheetRecordItem).filter(Boolean);
+        return {
+          items: payload.sheetRecords.map(normalizeSheetRecordItem).filter(Boolean),
+          found: true
+        };
       }
 
       if (Array.isArray(payload?.rows)) {
-        return payload.rows.map(normalizeSheetRecordItem).filter(Boolean);
+        return {
+          items: payload.rows.map(normalizeSheetRecordItem).filter(Boolean),
+          found: true
+        };
       }
 
-      return [];
+      return {
+        items: [],
+        found: false
+      };
     }
 
     function extractSharedMonthly(payload) {
       if (Array.isArray(payload?.monthly)) {
-        return payload.monthly.map(normalizeMonthlyItem);
+        return {
+          items: payload.monthly.map(normalizeMonthlyItem),
+          found: true
+        };
       }
 
       if (Array.isArray(payload?.sheetMonthly)) {
-        return payload.sheetMonthly.map(normalizeMonthlyItem);
+        return {
+          items: payload.sheetMonthly.map(normalizeMonthlyItem),
+          found: true
+        };
       }
 
       if (payload?.sheetSummary && typeof payload.sheetSummary === "object") {
         const inferredMonth = inferSummaryMonth(payload);
         if (inferredMonth) {
-          return [normalizeMonthlyItem({
-            month: inferredMonth,
-            budget: Number(payload.sheetSummary.budget || 0),
-            dailyBudgets: {}
-          })];
+          return {
+            items: [normalizeMonthlyItem({
+              month: inferredMonth,
+              budget: Number(payload.sheetSummary.budget || 0),
+              dailyBudgets: {}
+            })],
+            found: true
+          };
         }
       }
 
-      return [];
+      return {
+        items: [],
+        found: false
+      };
     }
 
     function inferSummaryMonth(payload) {
@@ -1427,6 +1568,41 @@
       return null;
     }
 
+    function normalizeSharedSheetRow(item) {
+      if (Array.isArray(item)) {
+        const [date, paymentMethod, category, detail, splitAmount, daigoAmount, karinAmount] = item;
+        const normalized = {
+          date: String(date || ""),
+          paymentMethod: String(paymentMethod || ""),
+          category: String(category || ""),
+          detail: String(detail || ""),
+          splitAmount: Number(splitAmount || 0),
+          daigoAmount: Number(daigoAmount || 0),
+          karinAmount: Number(karinAmount || 0)
+        };
+
+        if (!normalized.date || !normalized.paymentMethod || !normalized.category) {
+          return null;
+        }
+
+        return normalized;
+      }
+
+      if (item && typeof item === "object") {
+        return {
+          date: String(item.date || ""),
+          paymentMethod: String(item.paymentMethod || ""),
+          category: String(item.category || ""),
+          detail: String(item.detail || ""),
+          splitAmount: Number(item.splitAmount || item.split || item.warikan || 0),
+          daigoAmount: Number(item.daigoAmount || item.daigo || 0),
+          karinAmount: Number(item.karinAmount || item.karin || 0)
+        };
+      }
+
+      return null;
+    }
+
     function buildSheetDerivedId(date, paymentMethod, category, detail, amount, splitType) {
       return [
         date || "",
@@ -1436,6 +1612,18 @@
         Number(amount || 0),
         splitType || ""
       ].join("||");
+    }
+
+    function convertRecordToSharedRow(record) {
+      return {
+        date: record.date || "",
+        paymentMethod: record.paymentMethod || "",
+        category: record.category || "",
+        detail: record.detail || "",
+        splitAmount: record.splitType === "割り勘" ? Number(record.amount || 0) : 0,
+        daigoAmount: record.splitType === "大悟個別" ? Number(record.amount || 0) : 0,
+        karinAmount: record.splitType === "果林個別" ? Number(record.amount || 0) : 0
+      };
     }
 
     function syncSplitTypeByPaymentMethod() {
