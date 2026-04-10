@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>デート費用と予算管理</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --surface: rgba(255, 255, 255, 0.94);
+      --border: #d9e4f1;
+      --text: #233042;
+      --muted: #66758a;
+      --daigo: #4A90D9;
+      --daigo-soft: #e1effc;
+      --karin: #E8739A;
+      --karin-soft: #ffe2ec;
+      --accent: #1f2937;
+      --danger: #d6455d;
+      --shadow: 0 18px 42px rgba(31, 41, 55, 0.09);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(74, 144, 217, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(232, 115, 154, 0.18), transparent 28%),
+        linear-gradient(180deg, #fcfdff 0%, #eef3f9 100%);
+    }
+
+    .container {
+      width: min(1100px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 18px 0 36px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(74, 144, 217, 0.95), rgba(232, 115, 154, 0.92));
+      border-radius: 28px;
+      padding: 22px;
+      color: #fff;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 4vw, 2.8rem);
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .month-box, .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .month-box {
+      min-width: 180px;
+    }
+
+    .month-box label {
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .month-box input,
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tab-button {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.84);
+      border-radius: 999px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .tab-button.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(217, 228, 241, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 14px;
+    }
+
+    .stat {
+      min-height: 138px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      bottom: -32px;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      opacity: 0.45;
+    }
+
+    .stat.blue::after { background: var(--daigo-soft); }
+    .stat.pink::after { background: var(--karin-soft); }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 12px;
+    }
+
+    .value {
+      font-size: clamp(1.7rem, 3vw, 2.35rem);
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+      line-height: 1.2;
+    }
+
+    .value.daigo { color: var(--daigo); }
+    .value.karin { color: var(--karin); }
+
+    .subtext, .muted, .error {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .error {
+      color: var(--danger);
+      min-height: 1.4em;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .actions, .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: #eef4fb; color: var(--accent); border: 1px solid var(--border); }
+    .btn-delete { background: rgba(214, 69, 93, 0.12); color: var(--danger); border: 1px solid rgba(214, 69, 93, 0.18); }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    .item-top {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .badge.common { background: #e8f1fc; color: var(--daigo); }
+    .badge.daigo { background: var(--daigo-soft); color: var(--daigo); }
+    .badge.karin { background: var(--karin-soft); color: var(--karin); }
+
+    .amount {
+      white-space: nowrap;
+      font-size: 1.06rem;
+      font-weight: 800;
+    }
+
+    .chart-wrap {
+      min-height: 300px;
+      position: relative;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 14px 12px;
+      border-bottom: 1px solid #edf2f7;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f8fbff;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .panel {
+      border-radius: 16px;
+      padding: 16px;
+      background: #f5f9fe;
+      border: 1px solid var(--border);
+    }
+
+    .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed #d9e4f1;
+    }
+
+    .line:last-child { border-bottom: none; }
+
+    .sync-ok { color: #2f855a; }
+    .sync-warn { color: #dd6b20; }
+    .sync-bad { color: var(--danger); }
+
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .item, .actions, .toolbar { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>デート費用と予算管理</h1>
+          <p>日別予算、今月の残高、支出一覧、スプレッドシート同期を1つにまとめた単一ファイルアプリです。</p>
+        </div>
+        <div class="month-box">
+          <label for="globalMonth">対象月</label>
+          <input type="month" id="globalMonth" />
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="タブ">
+      <button class="tab-button active" data-tab="dashboard">ダッシュボード</button>
+      <button class="tab-button" data-tab="input">入力</button>
+      <button class="tab-button" data-tab="list">一覧</button>
+      <button class="tab-button" data-tab="sync">同期・設定</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-dashboard">
+      <article class="card" style="margin-bottom:16px;">
+        <div class="toolbar">
+          <div class="field" style="min-width:180px;">
+            <label for="dailyFocusDate">日別チェック日</label>
+            <input type="date" id="dailyFocusDate" />
+          </div>
+          <div class="muted" id="dailyFocusLabel">その日の予算と残高を確認します。</div>
+        </div>
+      </article>
+
+      <div class="grid grid-3">
+        <article class="card stat blue">
+          <div class="label">その日の予算</div>
+          <div class="value" id="dailyBudgetValue">¥0</div>
+          <div class="subtext">日別予算フォームで設定</div>
+        </article>
+        <article class="card stat blue">
+          <div class="label">その日の支出</div>
+          <div class="value" id="dailySpentValue">¥0</div>
+          <div class="subtext">選択日の合計支出</div>
+        </article>
+        <article class="card stat pink">
+          <div class="label">その日の残高</div>
+          <div class="value" id="dailyRemainingValue">¥0</div>
+          <div class="subtext">予算との差額</div>
+        </article>
+      </div>
+
+      <div class="grid grid-3" style="margin-top:16px;">
+        <article class="card stat blue">
+          <div class="label">今月の予算</div>
+          <div class="value" id="monthBudgetValue">¥0</div>
+          <div class="subtext">月単位で設定した予算</div>
+        </article>
+        <article class="card stat pink">
+          <div class="label">今月の支出</div>
+          <div class="value" id="monthSpentValue">¥0</div>
+          <div class="subtext" id="monthSpentCount">0件の支出</div>
+        </article>
+        <article class="card stat blue">
+          <div class="label">今月の残高</div>
+          <div class="value" id="monthRemainingValue">¥0</div>
+          <div class="subtext">予算との差額</div>
+        </article>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:16px;">
+        <article class="card">
+          <h2>カテゴリ別支出</h2>
+          <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+        </article>
+        <article class="card">
+          <h2>最近の支出</h2>
+          <div id="recentList" class="list"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-input">
+      <div class="grid grid-2">
+        <article class="card">
+          <h2>支出入力</h2>
+          <form id="recordForm">
+            <div class="form-grid">
+              <div class="field">
+                <label for="recordDate">日付</label>
+                <input type="date" id="recordDate" required />
+              </div>
+              <div class="field">
+                <label for="amount">金額</label>
+                <input type="number" id="amount" min="1" step="1" inputmode="numeric" required />
+              </div>
+              <div class="field">
+                <label for="paymentMethod">支払い方法</label>
+                <select id="paymentMethod" required>
+                  <option value="共通カード">共通カード</option>
+                  <option value="共通デビット">共通デビット</option>
+                  <option value="大悟">大悟</option>
+                  <option value="果林">果林</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="category">カテゴリ</label>
+                <select id="category" required>
+                  <option value="食費">食費</option>
+                  <option value="交通費">交通費</option>
+                  <option value="宿泊">宿泊</option>
+                  <option value="娯楽">娯楽</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="splitType">区分</label>
+                <select id="splitType" required>
+                  <option value="割り勘">割り勘</option>
+                  <option value="大悟個別">大悟個別</option>
+                  <option value="果林個別">果林個別</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label for="detail">詳細</label>
+                <textarea id="detail" placeholder="例：居酒屋、コンビニ、ホテル"></textarea>
+              </div>
+            </div>
+            <div class="actions" style="margin-top:16px;">
+              <button type="submit" class="btn btn-primary">支出を保存</button>
+            </div>
+            <div class="error" id="recordError"></div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2>予算入力</h2>
+          <form id="budgetForms">
+            <div class="form-grid">
+              <div class="field">
+                <label for="budgetDate">その日の予算額</label>
+                <input type="date" id="budgetDate" required />
+              </div>
+              <div class="field">
+                <label for="dailyBudgetAmount">日別予算</label>
+                <input type="number" id="dailyBudgetAmount" min="0" step="1" inputmode="numeric" required />
+              </div>
+              <div class="field">
+                <label for="monthlyBudgetAmount">今月の予算</label>
+                <input type="number" id="monthlyBudgetAmount" min="0" step="1" inputmode="numeric" />
+              </div>
+            </div>
+            <div class="actions" style="margin-top:16px;">
+              <button type="submit" class="btn btn-secondary">予算を保存</button>
+            </div>
+            <div class="error" id="budgetError"></div>
+          </form>
+          <div class="panel" style="margin-top:16px;">
+            <div class="line"><span>スプレッドシート向け</span><span>CSV と自動同期の両方に対応</span></div>
+            <div class="line"><span>日別予算</span><span>その日の残高チェック用</span></div>
+            <div class="line"><span>今月の予算</span><span>月間の残高確認用</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-list">
+      <article class="card">
+        <div class="toolbar" style="margin-bottom:14px;">
+          <div class="field" style="min-width:180px;">
+            <label for="listMonth">表示月</label>
+            <input type="month" id="listMonth" />
+          </div>
+          <div class="field" style="min-width:180px;">
+            <label for="paymentFilter">支払い方法フィルタ</label>
+            <select id="paymentFilter">
+              <option value="all">すべて</option>
+              <option value="共通カード">共通カード</option>
+              <option value="共通デビット">共通デビット</option>
+              <option value="大悟">大悟</option>
+              <option value="果林">果林</option>
+            </select>
+          </div>
+          <div class="actions" style="margin-left:auto;">
+            <button type="button" class="btn btn-secondary" id="exportMonthBtn">この月のCSV</button>
+            <button type="button" class="btn btn-secondary" id="exportAllBtn">全件CSV</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>支払い方法</th>
+                <th>カテゴリ</th>
+                <th>詳細</th>
+                <th>金額</th>
+                <th>区分</th>
+                <th>削除</th>
+              </tr>
+            </thead>
+            <tbody id="recordTableBody"></tbody>
+          </table>
+        </div>
+        <div class="muted" id="listCountText">0件を表示中</div>
+      </article>
+    </section>
+
+    <section class="tab-panel" id="tab-sync">
+      <div class="grid grid-2">
+        <article class="card">
+          <h2>Googleスプレッドシート自動同期</h2>
+          <div class="panel" style="margin-bottom:16px;">
+            <div class="line"><span>重要</span><span>共有URLそのものには直接書き込めません</span></div>
+            <div class="line"><span>必要なもの</span><span>Apps Script の Web アプリ URL</span></div>
+            <div class="line"><span>同期方式</span><span>保存のたびに全データを送信して上書き</span></div>
+          </div>
+
+          <form id="syncForm">
+            <div class="form-grid">
+              <div class="field full">
+                <label for="webAppUrl">Apps Script Web アプリ URL</label>
+                <input type="url" id="webAppUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+              </div>
+            </div>
+            <div class="actions" style="margin-top:16px;">
+              <button type="submit" class="btn btn-primary">同期設定を保存</button>
+              <button type="button" class="btn btn-secondary" id="syncNowBtn">今すぐ同期</button>
+            </div>
+            <div class="error" id="syncError"></div>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2>今月の確認</h2>
+          <div class="panel">
+            <div class="line"><span>今月の予算</span><span id="syncMonthBudget">¥0</span></div>
+            <div class="line"><span>今月の支出</span><span id="syncMonthSpent">¥0</span></div>
+            <div class="line"><span>今月の残高</span><span id="syncMonthRemaining">¥0</span></div>
+          </div>
+          <div class="panel" style="margin-top:16px;">
+            <div class="line"><span>同期状態</span><span id="syncStatus" class="sync-warn">未設定</span></div>
+            <div class="line"><span>最終同期</span><span id="syncLastAt">まだ同期していません</span></div>
+          </div>
+          <div class="actions" style="margin-top:16px;">
+            <button type="button" class="btn btn-secondary" id="exportBudgetBtn">予算CSV</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // 保存キーを定数化して、保存先を明確にする
+    const STORAGE_KEYS = {
+      records: "kakeibo_records",
+      monthly: "kakeibo_monthly",
+      sync: "kakeibo_sync_config"
+    };
+
+    const PAYMENT_METHODS = ["共通カード", "共通デビット", "大悟", "果林"];
+    const CATEGORIES = ["食費", "交通費", "宿泊", "娯楽", "その他"];
+    const SPLIT_TYPES = ["割り勘", "大悟個別", "果林個別"];
+
+    const state = {
+      records: [],
+      monthly: [],
+      syncConfig: {
+        webAppUrl: "",
+        lastSyncedAt: "",
+        lastStatus: "未設定"
+      },
+      currentTab: "dashboard",
+      selectedMonth: "",
+      focusDate: "",
+      paymentFilter: "all",
+      chart: null
+    };
+
+    const elements = {
+      globalMonth: document.getElementById("globalMonth"),
+      dailyFocusDate: document.getElementById("dailyFocusDate"),
+      listMonth: document.getElementById("listMonth"),
+      paymentFilter: document.getElementById("paymentFilter"),
+      tabs: document.querySelectorAll(".tab-button"),
+      panels: document.querySelectorAll(".tab-panel"),
+      recordForm: document.getElementById("recordForm"),
+      budgetForms: document.getElementById("budgetForms"),
+      syncForm: document.getElementById("syncForm"),
+      recordDate: document.getElementById("recordDate"),
+      amount: document.getElementById("amount"),
+      paymentMethod: document.getElementById("paymentMethod"),
+      category: document.getElementById("category"),
+      splitType: document.getElementById("splitType"),
+      detail: document.getElementById("detail"),
+      budgetDate: document.getElementById("budgetDate"),
+      dailyBudgetAmount: document.getElementById("dailyBudgetAmount"),
+      monthlyBudgetAmount: document.getElementById("monthlyBudgetAmount"),
+      webAppUrl: document.getElementById("webAppUrl"),
+      syncNowBtn: document.getElementById("syncNowBtn"),
+      exportMonthBtn: document.getElementById("exportMonthBtn"),
+      exportAllBtn: document.getElementById("exportAllBtn"),
+      exportBudgetBtn: document.getElementById("exportBudgetBtn"),
+      recordError: document.getElementById("recordError"),
+      budgetError: document.getElementById("budgetError"),
+      syncError: document.getElementById("syncError"),
+      dailyFocusLabel: document.getElementById("dailyFocusLabel"),
+      dailyBudgetValue: document.getElementById("dailyBudgetValue"),
+      dailySpentValue: document.getElementById("dailySpentValue"),
+      dailyRemainingValue: document.getElementById("dailyRemainingValue"),
+      monthBudgetValue: document.getElementById("monthBudgetValue"),
+      monthSpentValue: document.getElementById("monthSpentValue"),
+      monthSpentCount: document.getElementById("monthSpentCount"),
+      monthRemainingValue: document.getElementById("monthRemainingValue"),
+      recentList: document.getElementById("recentList"),
+      categoryChart: document.getElementById("categoryChart"),
+      recordTableBody: document.getElementById("recordTableBody"),
+      listCountText: document.getElementById("listCountText"),
+      syncMonthBudget: document.getElementById("syncMonthBudget"),
+      syncMonthSpent: document.getElementById("syncMonthSpent"),
+      syncMonthRemaining: document.getElementById("syncMonthRemaining"),
+      syncStatus: document.getElementById("syncStatus"),
+      syncLastAt: document.getElementById("syncLastAt")
+    };
+
+    function initialize() {
+      state.records = loadRecords();
+      state.monthly = loadMonthly();
+      state.syncConfig = loadSyncConfig();
+
+      state.selectedMonth = getCurrentMonth();
+      state.focusDate = getCurrentDate();
+
+      elements.globalMonth.value = state.selectedMonth;
+      elements.listMonth.value = state.selectedMonth;
+      elements.dailyFocusDate.value = state.focusDate;
+      elements.recordDate.value = state.focusDate;
+      elements.budgetDate.value = state.focusDate;
+      elements.webAppUrl.value = state.syncConfig.webAppUrl || "";
+
+      bindEvents();
+      syncSplitTypeByPaymentMethod();
+      renderAll();
+    }
+
+    function bindEvents() {
+      elements.recordForm.addEventListener("submit", handleRecordSubmit);
+      elements.budgetForms.addEventListener("submit", handleBudgetSubmit);
+      elements.syncForm.addEventListener("submit", handleSyncConfigSubmit);
+      elements.globalMonth.addEventListener("change", handleMonthChange);
+      elements.listMonth.addEventListener("change", handleListMonthChange);
+      elements.dailyFocusDate.addEventListener("change", handleFocusDateChange);
+      elements.paymentFilter.addEventListener("change", handlePaymentFilterChange);
+      elements.paymentMethod.addEventListener("change", syncSplitTypeByPaymentMethod);
+      elements.syncNowBtn.addEventListener("click", () => syncToSheets(true));
+      elements.exportMonthBtn.addEventListener("click", exportCurrentMonthCsv);
+      elements.exportAllBtn.addEventListener("click", exportAllCsv);
+      elements.exportBudgetBtn.addEventListener("click", exportBudgetCsv);
+
+      elements.tabs.forEach((button) => {
+        button.addEventListener("click", () => switchTab(button.dataset.tab));
+      });
+    }
+
+    function loadRecords() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.records);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function loadMonthly() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.monthly);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.map(normalizeMonthlyItem) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function loadSyncConfig() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEYS.sync);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return {
+          webAppUrl: parsed.webAppUrl || "",
+          lastSyncedAt: parsed.lastSyncedAt || "",
+          lastStatus: parsed.lastStatus || "未設定"
+        };
+      } catch (error) {
+        return { webAppUrl: "", lastSyncedAt: "", lastStatus: "未設定" };
+      }
+    }
+
+    function saveRecords() {
+      localStorage.setItem(STORAGE_KEYS.records, JSON.stringify(state.records));
+    }
+
+    function saveMonthly() {
+      localStorage.setItem(STORAGE_KEYS.monthly, JSON.stringify(state.monthly));
+    }
+
+    function saveSyncConfig() {
+      localStorage.setItem(STORAGE_KEYS.sync, JSON.stringify(state.syncConfig));
+    }
+
+    function normalizeMonthlyItem(item) {
+      return {
+        month: item.month || "",
+        budget: Number(item.budget) || 0,
+        dailyBudgets: item.dailyBudgets && typeof item.dailyBudgets === "object" ? item.dailyBudgets : {}
+      };
+    }
+
+    function handleRecordSubmit(event) {
+      event.preventDefault();
+      elements.recordError.textContent = "";
+
+      const record = {
+        id: createId(),
+        date: elements.recordDate.value,
+        paymentMethod: elements.paymentMethod.value,
+        category: elements.category.value,
+        detail: elements.detail.value.trim(),
+        amount: Number(elements.amount.value),
+        splitType: elements.splitType.value
+      };
+
+      const error = validateRecord(record);
+      if (error) {
+        elements.recordError.textContent = error;
+        return;
+      }
+
+      // 共通の支払い方法は常に割り勘として扱う
+      if (isCommonPayment(record.paymentMethod)) {
+        record.splitType = "割り勘";
+      }
+
+      state.records.push(record);
+      saveRecords();
+      renderAll();
+      syncToSheets(false);
+
+      elements.amount.value = "";
+      elements.detail.value = "";
+      elements.recordDate.value = record.date;
+    }
+
+    function handleBudgetSubmit(event) {
+      event.preventDefault();
+      elements.budgetError.textContent = "";
+
+      const budgetDate = elements.budgetDate.value;
+      const dailyBudgetAmount = Number(elements.dailyBudgetAmount.value);
+      const monthlyBudgetAmount = elements.monthlyBudgetAmount.value === "" ? null : Number(elements.monthlyBudgetAmount.value);
+
+      if (!budgetDate || !Number.isFinite(dailyBudgetAmount) || dailyBudgetAmount < 0) {
+        elements.budgetError.textContent = "日付と0以上の日別予算を入力してください。";
+        return;
+      }
+
+      if (monthlyBudgetAmount !== null && (!Number.isFinite(monthlyBudgetAmount) || monthlyBudgetAmount < 0)) {
+        elements.budgetError.textContent = "今月の予算は0以上で入力してください。";
+        return;
+      }
+
+      const month = budgetDate.slice(0, 7);
+      const monthly = getMonthlyInfo(month);
+
+      upsertMonthlyInfo({
+        ...monthly,
+        month,
+        budget: monthlyBudgetAmount === null ? monthly.budget : monthlyBudgetAmount,
+        dailyBudgets: {
+          ...monthly.dailyBudgets,
+          [budgetDate]: dailyBudgetAmount
+        }
+      });
+
+      state.selectedMonth = month;
+      state.focusDate = budgetDate;
+      elements.globalMonth.value = month;
+      elements.listMonth.value = month;
+      elements.dailyFocusDate.value = budgetDate;
+
+      saveMonthly();
+      renderAll();
+      syncToSheets(false);
+    }
+
+    function handleSyncConfigSubmit(event) {
+      event.preventDefault();
+      elements.syncError.textContent = "";
+
+      state.syncConfig.webAppUrl = elements.webAppUrl.value.trim();
+      state.syncConfig.lastStatus = state.syncConfig.webAppUrl ? "設定済み" : "未設定";
+      saveSyncConfig();
+      renderSyncStatus();
+    }
+
+    function handleMonthChange() {
+      state.selectedMonth = normalizeMonthValue(elements.globalMonth.value);
+      elements.listMonth.value = state.selectedMonth;
+      state.focusDate = normalizeFocusDate(state.focusDate, state.selectedMonth);
+      elements.dailyFocusDate.value = state.focusDate;
+      renderAll();
+    }
+
+    function handleListMonthChange() {
+      state.selectedMonth = normalizeMonthValue(elements.listMonth.value);
+      elements.globalMonth.value = state.selectedMonth;
+      state.focusDate = normalizeFocusDate(state.focusDate, state.selectedMonth);
+      elements.dailyFocusDate.value = state.focusDate;
+      renderAll();
+    }
+
+    function handleFocusDateChange() {
+      state.focusDate = normalizeFocusDate(elements.dailyFocusDate.value, state.selectedMonth);
+      elements.dailyFocusDate.value = state.focusDate;
+      renderAll();
+    }
+
+    function handlePaymentFilterChange() {
+      state.paymentFilter = elements.paymentFilter.value;
+      renderRecordTable();
+    }
+
+    function switchTab(tabName) {
+      state.currentTab = tabName;
+      elements.tabs.forEach((button) => button.classList.toggle("active", button.dataset.tab === tabName));
+      elements.panels.forEach((panel) => panel.classList.toggle("active", panel.id === `tab-${tabName}`));
+
+      if (tabName === "dashboard") {
+        renderChart();
+      }
+    }
+
+    function renderAll() {
+      state.focusDate = normalizeFocusDate(state.focusDate, state.selectedMonth);
+      elements.dailyFocusDate.value = state.focusDate;
+      renderDashboard();
+      renderRecentList();
+      renderRecordTable();
+      renderBudgetFormValues();
+      renderSyncPanel();
+
+      if (state.currentTab === "dashboard") {
+        renderChart();
+      }
+    }
+
+    function renderDashboard() {
+      const monthInfo = getMonthlyInfo(state.selectedMonth);
+      const monthRecords = getRecordsByMonth(state.selectedMonth);
+      const dailyBudget = getDailyBudget(monthInfo, state.focusDate);
+      const dailySpent = sumAmounts(getRecordsByDate(state.focusDate));
+      const monthSpent = sumAmounts(monthRecords);
+
+      elements.dailyFocusLabel.textContent = `${formatDate(state.focusDate)} の予算と残高`;
+      elements.dailyBudgetValue.textContent = formatCurrency(dailyBudget);
+      elements.dailySpentValue.textContent = formatCurrency(dailySpent);
+      elements.dailyRemainingValue.textContent = formatCurrency(dailyBudget - dailySpent);
+      elements.monthBudgetValue.textContent = formatCurrency(monthInfo.budget);
+      elements.monthSpentValue.textContent = formatCurrency(monthSpent);
+      elements.monthSpentCount.textContent = `${monthRecords.length}件の支出`;
+      elements.monthRemainingValue.textContent = formatCurrency(monthInfo.budget - monthSpent);
+    }
+
+    function renderRecentList() {
+      const monthRecords = getSortedRecords(getRecordsByMonth(state.selectedMonth)).slice(0, 5);
+      elements.recentList.innerHTML = "";
+
+      if (monthRecords.length === 0) {
+        elements.recentList.innerHTML = '<div class="muted">この月の支出はまだありません。</div>';
+        return;
+      }
+
+      monthRecords.forEach((record) => {
+        const item = document.createElement("div");
+        item.className = "item";
+
+        const left = document.createElement("div");
+        const top = document.createElement("div");
+        top.className = "item-top";
+
+        const badge = document.createElement("span");
+        badge.className = `badge ${getBadgeClass(record.paymentMethod)}`;
+        badge.textContent = record.paymentMethod;
+
+        const strong = document.createElement("strong");
+        strong.textContent = `${record.category} / ${record.splitType}`;
+
+        const date = document.createElement("span");
+        date.className = "muted";
+        date.textContent = formatDate(record.date);
+
+        top.append(badge, strong, date);
+
+        const detail = document.createElement("div");
+        detail.className = "muted";
+        detail.textContent = record.detail || "詳細なし";
+
+        left.append(top, detail);
+
+        const amount = document.createElement("div");
+        amount.className = "amount";
+        amount.textContent = formatCurrency(record.amount);
+
+        item.append(left, amount);
+        elements.recentList.appendChild(item);
+      });
+    }
+
+    function renderRecordTable() {
+      const records = getSortedRecords(
+        getRecordsByMonth(state.selectedMonth).filter((record) => {
+          return state.paymentFilter === "all" || record.paymentMethod === state.paymentFilter;
+        })
+      );
+
+      elements.recordTableBody.innerHTML = "";
+
+      if (records.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = '<td colspan="7">該当データがありません。</td>';
+        elements.recordTableBody.appendChild(row);
+        elements.listCountText.textContent = "0件を表示中";
+        return;
+      }
+
+      records.forEach((record) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${formatDate(record.date)}</td>
+          <td>${record.paymentMethod}</td>
+          <td>${record.category}</td>
+          <td>${escapeHtml(record.detail || "-")}</td>
+          <td>${formatCurrency(record.amount)}</td>
+          <td>${record.splitType}</td>
+          <td></td>
+        `;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn btn-delete";
+        button.textContent = "削除";
+        button.addEventListener("click", () => deleteRecord(record.id));
+        row.lastElementChild.appendChild(button);
+
+        elements.recordTableBody.appendChild(row);
+      });
+
+      elements.listCountText.textContent = `${records.length}件を表示中`;
+    }
+
+    function renderBudgetFormValues() {
+      const monthInfo = getMonthlyInfo(state.selectedMonth);
+      elements.budgetDate.value = state.focusDate;
+      elements.dailyBudgetAmount.value = getDailyBudget(monthInfo, state.focusDate) || "";
+      elements.monthlyBudgetAmount.value = monthInfo.budget || "";
+    }
+
+    function renderSyncPanel() {
+      const monthInfo = getMonthlyInfo(state.selectedMonth);
+      const monthSpent = sumAmounts(getRecordsByMonth(state.selectedMonth));
+
+      elements.syncMonthBudget.textContent = formatCurrency(monthInfo.budget);
+      elements.syncMonthSpent.textContent = formatCurrency(monthSpent);
+      elements.syncMonthRemaining.textContent = formatCurrency(monthInfo.budget - monthSpent);
+      renderSyncStatus();
+    }
+
+    function renderSyncStatus() {
+      const status = state.syncConfig.lastStatus || "未設定";
+      elements.syncStatus.textContent = status;
+      elements.syncStatus.className = status.includes("成功") || status.includes("送信済み")
+        ? "sync-ok"
+        : status.includes("失敗")
+          ? "sync-bad"
+          : "sync-warn";
+      elements.syncLastAt.textContent = state.syncConfig.lastSyncedAt || "まだ同期していません";
+    }
+
+    function renderChart() {
+      destroyChart();
+
+      const grouped = CATEGORIES.map((category) => ({
+        label: category,
+        total: getRecordsByMonth(state.selectedMonth)
+          .filter((record) => record.category === category)
+          .reduce((sum, record) => sum + record.amount, 0)
+      })).filter((item) => item.total > 0);
+
+      const context = elements.categoryChart.getContext("2d");
+
+      if (grouped.length === 0) {
+        clearCanvas(elements.categoryChart, context, "この月の支出データはありません");
+        return;
+      }
+
+      state.chart = new Chart(context, {
+        type: "pie",
+        data: {
+          labels: grouped.map((item) => item.label),
+          datasets: [{
+            data: grouped.map((item) => item.total),
+            backgroundColor: ["#4A90D9", "#74A9E4", "#E8739A", "#F29AB5", "#F6B26B"],
+            borderColor: "#ffffff",
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } }
+        }
+      });
+    }
+
+    function destroyChart() {
+      if (state.chart) {
+        state.chart.destroy();
+        state.chart = null;
+      }
+    }
+
+    function deleteRecord(id) {
+      state.records = state.records.filter((record) => record.id !== id);
+      saveRecords();
+      renderAll();
+      syncToSheets(false);
+    }
+
+    async function syncToSheets(isManual) {
+      elements.syncError.textContent = "";
+
+      if (!state.syncConfig.webAppUrl) {
+        state.syncConfig.lastStatus = "未設定";
+        saveSyncConfig();
+        renderSyncStatus();
+        if (isManual) {
+          elements.syncError.textContent = "Apps Script Web アプリ URL を先に設定してください。";
+        }
+        return;
+      }
+
+      const payload = {
+        records: getSortedRecords([...state.records]),
+        monthly: [...state.monthly].sort((a, b) => a.month.localeCompare(b.month)),
+        exportedAt: new Date().toISOString()
+      };
+
+      try {
+        // Web アプリへ全データを送って、スプレッドシート側で毎回上書き同期する
+        const response = await fetch(state.syncConfig.webAppUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        state.syncConfig.lastSyncedAt = new Date().toLocaleString("ja-JP");
+        state.syncConfig.lastStatus = "同期送信済み";
+        saveSyncConfig();
+        renderSyncStatus();
+      } catch (error) {
+        state.syncConfig.lastStatus = "同期失敗";
+        saveSyncConfig();
+        renderSyncStatus();
+        if (isManual) {
+          elements.syncError.textContent = `同期に失敗しました。${error.message || "Apps Script URL と公開設定を確認してください。"}`;
+        }
+      }
+    }
+
+    function exportCurrentMonthCsv() {
+      const rows = buildRecordRows(getSortedRecords(getRecordsByMonth(state.selectedMonth)));
+      downloadCsv(rows, `date-records-${state.selectedMonth}.csv`);
+    }
+
+    function exportAllCsv() {
+      const rows = buildRecordRows(getSortedRecords([...state.records]));
+      downloadCsv(rows, "date-records-all.csv");
+    }
+
+    function exportBudgetCsv() {
+      const rows = [
+        ["month", "budget", "date", "dailyBudget"],
+        ...[...state.monthly]
+          .sort((a, b) => a.month.localeCompare(b.month))
+          .flatMap((item) => {
+            const dailyEntries = Object.entries(item.dailyBudgets || {});
+            if (dailyEntries.length === 0) {
+              return [[item.month, item.budget, "", ""]];
+            }
+            return dailyEntries
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([date, budget]) => [item.month, item.budget, date, budget]);
+          })
+      ];
+
+      downloadCsv(rows, "date-budgets.csv");
+    }
+
+    function buildRecordRows(records) {
+      return [
+        ["id", "date", "paymentMethod", "category", "detail", "amount", "splitType"],
+        ...records.map((record) => [
+          record.id,
+          record.date,
+          record.paymentMethod,
+          record.category,
+          record.detail || "",
+          record.amount,
+          record.splitType
+        ])
+      ];
+    }
+
+    function downloadCsv(rows, fileName) {
+      const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function validateRecord(record) {
+      if (!record.date) return "日付を入力してください。";
+      if (!PAYMENT_METHODS.includes(record.paymentMethod)) return "支払い方法が不正です。";
+      if (!CATEGORIES.includes(record.category)) return "カテゴリが不正です。";
+      if (!SPLIT_TYPES.includes(record.splitType)) return "区分が不正です。";
+      if (!Number.isFinite(record.amount) || record.amount <= 0) return "金額は正の数値で入力してください。";
+      return "";
+    }
+
+    function syncSplitTypeByPaymentMethod() {
+      if (isCommonPayment(elements.paymentMethod.value)) {
+        elements.splitType.value = "割り勘";
+        elements.splitType.disabled = true;
+      } else {
+        elements.splitType.disabled = false;
+      }
+    }
+
+    function isCommonPayment(paymentMethod) {
+      return paymentMethod === "共通カード" || paymentMethod === "共通デビット";
+    }
+
+    function getMonthlyInfo(month) {
+      return state.monthly.find((item) => item.month === month) || {
+        month,
+        budget: 0,
+        dailyBudgets: {}
+      };
+    }
+
+    function upsertMonthlyInfo(item) {
+      const normalized = normalizeMonthlyItem(item);
+      const index = state.monthly.findIndex((entry) => entry.month === normalized.month);
+      if (index >= 0) {
+        state.monthly[index] = normalized;
+      } else {
+        state.monthly.push(normalized);
+      }
+      saveMonthly();
+    }
+
+    function getDailyBudget(monthlyInfo, date) {
+      return Number(monthlyInfo.dailyBudgets?.[date]) || 0;
+    }
+
+    function getRecordsByMonth(month) {
+      return state.records.filter((record) => record.date.startsWith(month));
+    }
+
+    function getRecordsByDate(date) {
+      return state.records.filter((record) => record.date === date);
+    }
+
+    function getSortedRecords(records) {
+      return [...records].sort((a, b) => {
+        if (a.date === b.date) return b.id.localeCompare(a.id);
+        return b.date.localeCompare(a.date);
+      });
+    }
+
+    function sumAmounts(records) {
+      return records.reduce((sum, record) => sum + Number(record.amount || 0), 0);
+    }
+
+    function normalizeMonthValue(value) {
+      return value || getCurrentMonth();
+    }
+
+    function normalizeFocusDate(value, month) {
+      if (value && value.startsWith(month)) return value;
+      const today = getCurrentDate();
+      return today.startsWith(month) ? today : `${month}-01`;
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("ja-JP", {
+        style: "currency",
+        currency: "JPY",
+        maximumFractionDigits: 0
+      }).format(value);
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const [year, month, day] = value.split("-");
+      return `${year}/${month}/${day}`;
+    }
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+      return `rec_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    function getCurrentMonth() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function getCurrentDate() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function getBadgeClass(paymentMethod) {
+      if (paymentMethod === "大悟") return "daigo";
+      if (paymentMethod === "果林") return "karin";
+      return "common";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function escapeCsvCell(value) {
+      return `"${String(value ?? "").replaceAll('"', '""')}"`;
+    }
+
+    function clearCanvas(canvas, context, message) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.save();
+      context.font = '16px "Hiragino Sans", sans-serif';
+      context.fillStyle = "#66758a";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(message, canvas.width / 2, canvas.height / 2);
+      context.restore();
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
