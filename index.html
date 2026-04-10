@@ -559,6 +559,7 @@
             </div>
             <div class="actions" style="margin-top:16px;">
               <button type="submit" class="btn btn-primary">同期設定を保存</button>
+              <button type="button" class="btn btn-secondary" id="refreshSharedBtn">共有データ読込</button>
               <button type="button" class="btn btn-secondary" id="syncNowBtn">今すぐ同期</button>
             </div>
             <div class="error" id="syncError"></div>
@@ -631,6 +632,7 @@
       dailyBudgetAmount: document.getElementById("dailyBudgetAmount"),
       monthlyBudgetAmount: document.getElementById("monthlyBudgetAmount"),
       webAppUrl: document.getElementById("webAppUrl"),
+      refreshSharedBtn: document.getElementById("refreshSharedBtn"),
       syncNowBtn: document.getElementById("syncNowBtn"),
       exportMonthBtn: document.getElementById("exportMonthBtn"),
       exportAllBtn: document.getElementById("exportAllBtn"),
@@ -657,7 +659,7 @@
       syncLastAt: document.getElementById("syncLastAt")
     };
 
-    function initialize() {
+    async function initialize() {
       state.records = loadRecords();
       state.monthly = loadMonthly();
       state.syncConfig = loadSyncConfig();
@@ -674,6 +676,7 @@
 
       bindEvents();
       syncSplitTypeByPaymentMethod();
+      await refreshFromSheets(false);
       renderAll();
     }
 
@@ -686,6 +689,7 @@
       elements.dailyFocusDate.addEventListener("change", handleFocusDateChange);
       elements.paymentFilter.addEventListener("change", handlePaymentFilterChange);
       elements.paymentMethod.addEventListener("change", syncSplitTypeByPaymentMethod);
+      elements.refreshSharedBtn.addEventListener("click", () => refreshFromSheets(true));
       elements.syncNowBtn.addEventListener("click", () => syncToSheets(true));
       elements.exportMonthBtn.addEventListener("click", exportCurrentMonthCsv);
       elements.exportAllBtn.addEventListener("click", exportAllCsv);
@@ -750,7 +754,7 @@
       };
     }
 
-    function handleRecordSubmit(event) {
+    async function handleRecordSubmit(event) {
       event.preventDefault();
       elements.recordError.textContent = "";
 
@@ -778,14 +782,15 @@
       state.records.push(record);
       saveRecords();
       renderAll();
-      syncToSheets(false);
+      await syncToSheets(false);
+      await refreshFromSheets(false);
 
       elements.amount.value = "";
       elements.detail.value = "";
       elements.recordDate.value = record.date;
     }
 
-    function handleBudgetSubmit(event) {
+    async function handleBudgetSubmit(event) {
       event.preventDefault();
       elements.budgetError.textContent = "";
 
@@ -824,7 +829,8 @@
 
       saveMonthly();
       renderAll();
-      syncToSheets(false);
+      await syncToSheets(false);
+      await refreshFromSheets(false);
     }
 
     function handleSyncConfigSubmit(event) {
@@ -1063,11 +1069,12 @@
       }
     }
 
-    function deleteRecord(id) {
+    async function deleteRecord(id) {
       state.records = state.records.filter((record) => record.id !== id);
       saveRecords();
       renderAll();
-      syncToSheets(false);
+      await syncToSheets(false);
+      await refreshFromSheets(false);
     }
 
     async function syncToSheets(isManual) {
@@ -1091,7 +1098,7 @@
 
       try {
         // Web アプリへ全データを送って、スプレッドシート側で毎回上書き同期する
-        const response = await fetch(state.syncConfig.webAppUrl, {
+        await fetch(state.syncConfig.webAppUrl, {
           method: "POST",
           mode: "no-cors",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -1102,6 +1109,7 @@
         state.syncConfig.lastStatus = "同期送信済み";
         saveSyncConfig();
         renderSyncStatus();
+        return true;
       } catch (error) {
         state.syncConfig.lastStatus = "同期失敗";
         saveSyncConfig();
@@ -1109,7 +1117,77 @@
         if (isManual) {
           elements.syncError.textContent = `同期に失敗しました。${error.message || "Apps Script URL と公開設定を確認してください。"}`;
         }
+        return false;
       }
+    }
+
+    async function refreshFromSheets(isManual) {
+      if (!state.syncConfig.webAppUrl) {
+        return false;
+      }
+
+      elements.syncError.textContent = "";
+
+      try {
+        const data = await fetchSharedDataJsonp(state.syncConfig.webAppUrl);
+
+        if (Array.isArray(data.records)) {
+          state.records = data.records.map(normalizeRecordItem);
+          saveRecords();
+        }
+
+        if (Array.isArray(data.monthly)) {
+          state.monthly = data.monthly.map(normalizeMonthlyItem);
+          saveMonthly();
+        }
+
+        state.syncConfig.lastStatus = "共有データ読込済み";
+        state.syncConfig.lastSyncedAt = new Date().toLocaleString("ja-JP");
+        saveSyncConfig();
+        renderAll();
+        return true;
+      } catch (error) {
+        if (isManual) {
+          elements.syncError.textContent = `共有データの読込に失敗しました。${error.message || ""}`;
+        }
+        return false;
+      }
+    }
+
+    function fetchSharedDataJsonp(webAppUrl) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `__dateBudgetJsonp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const url = new URL(webAppUrl);
+
+        url.searchParams.set("action", "data");
+        url.searchParams.set("callback", callbackName);
+
+        const script = document.createElement("script");
+        const cleanup = () => {
+          delete window[callbackName];
+          script.remove();
+        };
+
+        const timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("タイムアウトしました"));
+        }, 12000);
+
+        window[callbackName] = (payload) => {
+          window.clearTimeout(timer);
+          cleanup();
+          resolve(payload || {});
+        };
+
+        script.onerror = () => {
+          window.clearTimeout(timer);
+          cleanup();
+          reject(new Error("Apps Script の読込に失敗しました"));
+        };
+
+        script.src = url.toString();
+        document.body.appendChild(script);
+      });
     }
 
     function exportCurrentMonthCsv() {
@@ -1176,6 +1254,18 @@
       if (!SPLIT_TYPES.includes(record.splitType)) return "区分が不正です。";
       if (!Number.isFinite(record.amount) || record.amount <= 0) return "金額は正の数値で入力してください。";
       return "";
+    }
+
+    function normalizeRecordItem(item) {
+      return {
+        id: String(item.id || createId()),
+        date: String(item.date || ""),
+        paymentMethod: String(item.paymentMethod || ""),
+        category: String(item.category || ""),
+        detail: String(item.detail || ""),
+        amount: Number(item.amount) || 0,
+        splitType: String(item.splitType || "割り勘")
+      };
     }
 
     function syncSplitTypeByPaymentMethod() {
