@@ -978,28 +978,37 @@
     }
 
     function renderDashboard() {
+      const useSharedCycle = hasSharedCycleData();
       const monthInfo = getMonthlyInfo(state.selectedMonth);
-      const monthRecords = getRecordsByMonth(state.selectedMonth);
-      const dailyBudget = getDailyBudget(monthInfo, state.focusDate);
-      const dailySpent = sumAmounts(getRecordsByDate(state.focusDate));
-      const monthSpent = sumAmounts(monthRecords);
+      const activeRecords = getActiveCycleRecords();
+      const activeBudget = useSharedCycle ? Number(state.sharedSheetSummary.budget || 0) : monthInfo.budget;
+      const dailyBudget = useSharedCycle ? activeBudget : getDailyBudget(monthInfo, state.focusDate);
+      const dailySpent = useSharedCycle ? sumAmounts(activeRecords) : sumAmounts(getRecordsByDate(state.focusDate));
+      const activeSpent = sumAmounts(activeRecords);
 
-      elements.dailyFocusLabel.textContent = `${formatDate(state.focusDate)} の予算と残高`;
+      elements.dailyFocusLabel.textContent = useSharedCycle
+        ? "利用中シート基準の予算と残高"
+        : `${formatDate(state.focusDate)} の予算と残高`;
       elements.dailyBudgetValue.textContent = formatCurrency(dailyBudget);
       elements.dailySpentValue.textContent = formatCurrency(dailySpent);
       elements.dailyRemainingValue.textContent = formatCurrency(dailyBudget - dailySpent);
-      elements.monthBudgetValue.textContent = formatCurrency(monthInfo.budget);
-      elements.monthSpentValue.textContent = formatCurrency(monthSpent);
-      elements.monthSpentCount.textContent = `${monthRecords.length}件の支出`;
-      elements.monthRemainingValue.textContent = formatCurrency(monthInfo.budget - monthSpent);
+      elements.monthBudgetValue.textContent = formatCurrency(activeBudget);
+      elements.monthSpentValue.textContent = formatCurrency(activeSpent);
+      elements.monthSpentCount.textContent = useSharedCycle
+        ? `利用中シート ${activeRecords.length}件の支出`
+        : `${activeRecords.length}件の支出`;
+      elements.monthRemainingValue.textContent = formatCurrency(activeBudget - activeSpent);
     }
 
     function renderRecentList() {
-      const monthRecords = getSortedRecords(getRecordsByMonth(state.selectedMonth)).slice(0, 5);
+      const useSharedCycle = hasSharedCycleData();
+      const monthRecords = getSortedRecords(getActiveCycleRecords()).slice(0, 5);
       elements.recentList.innerHTML = "";
 
       if (monthRecords.length === 0) {
-        elements.recentList.innerHTML = '<div class="muted">この月の支出はまだありません。</div>';
+        elements.recentList.innerHTML = useSharedCycle
+          ? '<div class="muted">利用中シートの支出はまだありません。</div>'
+          : '<div class="muted">この月の支出はまだありません。</div>';
         return;
       }
 
@@ -1040,8 +1049,9 @@
     }
 
     function renderRecordTable() {
+      const useSharedCycle = hasSharedCycleData();
       const records = getSortedRecords(
-        getRecordsByMonth(state.selectedMonth).filter((record) => {
+        getActiveCycleRecords().filter((record) => {
           return state.paymentFilter === "all" || record.paymentMethod === state.paymentFilter;
         })
       );
@@ -1050,7 +1060,9 @@
 
       if (records.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = '<td colspan="7">該当データがありません。</td>';
+        row.innerHTML = useSharedCycle
+          ? '<td colspan="7">利用中シートに該当データがありません。</td>'
+          : '<td colspan="7">該当データがありません。</td>';
         elements.recordTableBody.appendChild(row);
         elements.listCountText.textContent = "0件を表示中";
         return;
@@ -1078,14 +1090,18 @@
         elements.recordTableBody.appendChild(row);
       });
 
-      elements.listCountText.textContent = `${records.length}件を表示中`;
+      elements.listCountText.textContent = useSharedCycle
+        ? `利用中シートから ${records.length}件を表示中`
+        : `${records.length}件を表示中`;
     }
 
     function renderBudgetFormValues() {
       const monthInfo = getMonthlyInfo(state.selectedMonth);
       elements.budgetDate.value = state.focusDate;
       elements.dailyBudgetAmount.value = getDailyBudget(monthInfo, state.focusDate) || "";
-      elements.monthlyBudgetAmount.value = monthInfo.budget || "";
+      elements.monthlyBudgetAmount.value = hasSharedCycleData()
+        ? Number(state.sharedSheetSummary.budget || 0) || ""
+        : monthInfo.budget || "";
     }
 
     function renderSharedSheetPanel() {
@@ -1122,11 +1138,13 @@
 
     function renderSyncPanel() {
       const monthInfo = getMonthlyInfo(state.selectedMonth);
-      const monthSpent = sumAmounts(getRecordsByMonth(state.selectedMonth));
+      const activeRecords = getActiveCycleRecords();
+      const activeBudget = hasSharedCycleData() ? Number(state.sharedSheetSummary.budget || 0) : monthInfo.budget;
+      const monthSpent = sumAmounts(activeRecords);
 
-      elements.syncMonthBudget.textContent = formatCurrency(monthInfo.budget);
+      elements.syncMonthBudget.textContent = formatCurrency(activeBudget);
       elements.syncMonthSpent.textContent = formatCurrency(monthSpent);
-      elements.syncMonthRemaining.textContent = formatCurrency(monthInfo.budget - monthSpent);
+      elements.syncMonthRemaining.textContent = formatCurrency(activeBudget - monthSpent);
       renderSyncStatus();
     }
 
@@ -1432,8 +1450,9 @@
     }
 
     function exportCurrentMonthCsv() {
-      const rows = buildRecordRows(getSortedRecords(getRecordsByMonth(state.selectedMonth)));
-      downloadCsv(rows, `date-records-${state.selectedMonth}.csv`);
+      const useSharedCycle = hasSharedCycleData();
+      const rows = buildRecordRows(getSortedRecords(getActiveCycleRecords()));
+      downloadCsv(rows, useSharedCycle ? "date-records-current-cycle.csv" : `date-records-${state.selectedMonth}.csv`);
     }
 
     function exportAllCsv() {
@@ -1660,6 +1679,14 @@
 
     function getDailyBudget(monthlyInfo, date) {
       return Number(monthlyInfo.dailyBudgets?.[date]) || 0;
+    }
+
+    function hasSharedCycleData() {
+      return state.sharedSheetRows.length > 0;
+    }
+
+    function getActiveCycleRecords() {
+      return hasSharedCycleData() ? [...state.records] : getRecordsByMonth(state.selectedMonth);
     }
 
     function getRecordsByMonth(month) {
