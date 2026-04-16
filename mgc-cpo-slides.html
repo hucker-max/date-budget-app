@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MGC材料のCPO/PEC3適用可能性 - スライド</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --paper: rgba(255, 251, 245, 0.9);
+      --ink: #1f2933;
+      --muted: #5e6b76;
+      --line: rgba(31, 41, 51, 0.12);
+      --navy: #123b5d;
+      --teal: #0f766e;
+      --amber: #b45309;
+      --rose: #b42318;
+      --sky: #dcecf6;
+      --mint: #dff3ef;
+      --sand: #f8e8c8;
+      --blush: #f7d9d5;
+      --shadow: 0 18px 50px rgba(18, 59, 93, 0.12);
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(18, 59, 93, 0.12), transparent 28%),
+        radial-gradient(circle at right 10% bottom 15%, rgba(15, 118, 110, 0.10), transparent 24%),
+        linear-gradient(180deg, #f8f4ed 0%, #efe8db 100%);
+    }
+
+    .deck {
+      width: min(1280px, calc(100% - 32px));
+      margin: 28px auto 48px;
+      display: grid;
+      gap: 26px;
+    }
+
+    .slide {
+      position: relative;
+      min-height: min(720px, calc(100vh - 56px));
+      background: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 34px 38px 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(10px);
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(18, 59, 93, 0.06), transparent 35%),
+        linear-gradient(300deg, rgba(15, 118, 110, 0.06), transparent 30%);
+      pointer-events: none;
+    }
+
+    .slide-header,
+    .slide-body,
+    .slide-footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(18, 59, 93, 0.08);
+      color: var(--navy);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-size: clamp(2rem, 5vw, 3.6rem);
+      line-height: 1.08;
+      max-width: 10em;
+    }
+
+    h2 {
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      line-height: 1.15;
+      margin-top: 16px;
+    }
+
+    .lead {
+      margin-top: 18px;
+      max-width: 56rem;
+      font-size: clamp(1rem, 1.8vw, 1.22rem);
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .hero-grid,
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-grid {
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: end;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel,
+    .metric,
+    .material-card,
+    .summary-card {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px 22px;
+    }
+
+    .metric {
+      min-height: 182px;
+    }
+
+    .metric h3,
+    .material-card h3,
+    .summary-card h3,
+    .panel h3 {
+      font-size: 1.08rem;
+      margin-bottom: 12px;
+    }
+
+    .metric p,
+    .material-card p,
+    .summary-card p,
+    .panel p {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.98rem;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .tag.good { background: var(--mint); color: var(--teal); }
+    .tag.warn { background: var(--sand); color: var(--amber); }
+    .tag.risk { background: var(--blush); color: var(--rose); }
+    .tag.base { background: var(--sky); color: var(--navy); }
+
+    .big-callout {
+      padding: 24px 26px;
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(18, 59, 93, 0.96), rgba(15, 118, 110, 0.92));
+      color: #fff;
+    }
+
+    .big-callout p {
+      color: rgba(255, 255, 255, 0.88);
+      line-height: 1.75;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+
+    ul {
+      margin: 12px 0 0;
+      padding-left: 1.2em;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .table-wrap {
+      margin-top: 18px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.74);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.97rem;
+    }
+
+    th,
+    td {
+      padding: 15px 16px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: rgba(18, 59, 93, 0.08);
+      color: var(--navy);
+      font-size: 0.92rem;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status {
+      display: inline-block;
+      min-width: 7.5em;
+      text-align: center;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.85rem;
+    }
+
+    .status-yes { background: var(--mint); color: var(--teal); }
+    .status-mid { background: var(--sand); color: var(--amber); }
+    .status-no { background: var(--blush); color: var(--rose); }
+
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .footer-note {
+      max-width: 70%;
+      line-height: 1.6;
+    }
+
+    .page {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(18, 59, 93, 0.08);
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    .three-step {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .step {
+      padding: 20px 22px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+    }
+
+    .step .num {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(18, 59, 93, 0.1);
+      color: var(--navy);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .closing {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .quote {
+      font-size: clamp(1.3rem, 2.6vw, 2rem);
+      line-height: 1.5;
+      color: var(--navy);
+      font-weight: 800;
+      margin-top: 18px;
+      max-width: 14em;
+    }
+
+    @media (max-width: 960px) {
+      .slide {
+        min-height: auto;
+        padding: 26px 24px 24px;
+      }
+
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .three-step,
+      .closing {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-note {
+        max-width: none;
+      }
+
+      .slide-footer {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      th,
+      td {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide">
+      <div class="slide-header hero-grid">
+        <div>
+          <div class="eyebrow">MGC材料評価 / CPO・PEC3</div>
+          <h1>BT樹脂系・OPE・ユピゼータEPの<br />光電融合実装への適用可能性</h1>
+          <p class="lead">
+            公開情報ベースで、三菱ガス化学の3材料が CPO や IOWN PEC3 相当の光電融合実装に使えそうかを整理した。
+            主な評価軸は、<strong>260℃リフロー耐性</strong>、<strong>1310/1550nmでの光学損失</strong>、
+            <strong>CTE・寸法安定性</strong>の3点。
+          </p>
+        </div>
+        <div class="big-callout">
+          <h3>結論先取り</h3>
+          <p>
+            最も公開エビデンスが強いのは <strong>OPE</strong>。ただし、3材料とも
+            <strong>1310/1550nm帯の導波路損失データ</strong>が不足しており、
+            PEC3向け材料として即断できる段階ではない。
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">教授・企業向けに3分で説明できるよう、結論と不足データを優先して再構成。</div>
+        <div class="page">1</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">評価の見方</div>
+        <h2>何を見れば PEC3 向け材料として判断できるか</h2>
+      </div>
+      <div class="slide-body grid-3">
+        <article class="metric">
+          <h3>1. 高温実装耐性</h3>
+          <p>
+            260℃前後のリフローに耐えるか。剥離、反り、クラック、実装後の物性維持が重要。
+          </p>
+          <div class="tag-row">
+            <span class="tag good">260℃耐性</span>
+            <span class="tag base">実装適合性</span>
+          </div>
+        </article>
+        <article class="metric">
+          <h3>2. 光学損失</h3>
+          <p>
+            PEC3 では 1310/1550nm 帯での低損失導波が中核。透過率だけでなく導波路損失の実測がほしい。
+          </p>
+          <div class="tag-row">
+            <span class="tag good">1310nm</span>
+            <span class="tag good">1550nm</span>
+            <span class="tag risk">導波路損失</span>
+          </div>
+        </article>
+        <article class="metric">
+          <h3>3. CTE・寸法安定性</h3>
+          <p>
+            光学部品と電気配線を近接実装するため、熱膨張差による位置ずれや信頼性低下を避けたい。
+          </p>
+          <div class="tag-row">
+            <span class="tag base">CTE</span>
+            <span class="tag warn">反り</span>
+            <span class="tag warn">寸法安定性</span>
+          </div>
+        </article>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">公開情報調査なので、「数値の有無」と「一次ソースの強さ」を重視して判定している。</div>
+        <div class="page">2</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">全体比較</div>
+        <h2>3材料の比較サマリー</h2>
+      </div>
+      <div class="slide-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>材料</th>
+                <th>260℃リフロー耐性</th>
+                <th>1310/1550nm損失</th>
+                <th>CTE・寸法安定性</th>
+                <th>現時点の見立て</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>OPE</strong></td>
+                <td><span class="status status-yes">公開根拠あり</span></td>
+                <td><span class="status status-no">未確認</span></td>
+                <td><span class="status status-yes">実測値あり</span></td>
+                <td>高温実装に耐える電気系材料として有望。光導波材料としては追加確認が必要。</td>
+              </tr>
+              <tr>
+                <td><strong>BT樹脂系</strong></td>
+                <td><span class="status status-mid">間接根拠あり</span></td>
+                <td><span class="status status-no">未確認</span></td>
+                <td><span class="status status-mid">数値あり</span></td>
+                <td>基板材としての有望性は高いが、PEC3の光材料としては証拠不足。</td>
+              </tr>
+              <tr>
+                <td><strong>ユピゼータEP</strong></td>
+                <td><span class="status status-no">未確認</span></td>
+                <td><span class="status status-no">未確認</span></td>
+                <td><span class="status status-no">未確認</span></td>
+                <td>光学樹脂としての可能性はあるが、PEC3向け定量評価が足りない。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">公開情報だけで最も押し出しやすいのは OPE。BT は「基板材料として強い」、ユピゼータEP は「光学部材候補」という位置づけ。</div>
+        <div class="page">3</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">材料別の要点</div>
+        <h2>OPE と BT樹脂系の読み方</h2>
+      </div>
+      <div class="slide-body grid-2">
+        <article class="material-card">
+          <h3>OPE</h3>
+          <p>
+            公開エビデンスが最も強い材料。IPC資料で <strong>260℃×60秒のソルダーディップOK</strong> が示され、
+            さらに <strong>CTEの実測値</strong> も確認できる。
+          </p>
+          <ul>
+            <li>少なくとも高温実装に耐える電気系材料としては有望</li>
+            <li>実装プロセス適合性を説明しやすい</li>
+            <li>ただし、1310/1550nm帯の導波路損失は公開情報で未確認</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag good">一次ソース強い</span>
+            <span class="tag warn">光学データ不足</span>
+          </div>
+        </article>
+        <article class="material-card">
+          <h3>BT樹脂系</h3>
+          <p>
+            半導体パッケージ基板材としての適性が高く、<strong>Tg や CTE の数値</strong> は公開されている。
+            オンボード光モジュール関連の採用・評価事例もあり、CPO/PEC周辺用途との接点はある。
+          </p>
+          <ul>
+            <li>電気配線側の基板材料としてはかなり有望</li>
+            <li>260℃リフローを明示した公開試験データは不足</li>
+            <li>1310/1550nm帯の光学損失データも不足</li>
+          </ul>
+          <div class="tag-row">
+            <span class="tag good">基板材として強い</span>
+            <span class="tag warn">PEC3光材料として未確定</span>
+          </div>
+        </article>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">説明では、OPE は「高温耐性の証拠が明確」、BT は「基板材としては強いが、光導波材としては証拠不足」と切り分けると伝わりやすい。</div>
+        <div class="page">4</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">材料別の要点</div>
+        <h2>ユピゼータEPの位置づけ</h2>
+      </div>
+      <div class="slide-body closing">
+        <div class="panel">
+          <h3>現時点で言えること</h3>
+          <p>
+            ユピゼータEPは光学樹脂であり、レンズ用途を中心に実績がある。公開情報では
+            <strong>Tg</strong> や一部の光学特性は確認できるため、光学部材候補として完全に外れるわけではない。
+          </p>
+          <ul>
+            <li>光学樹脂としての方向性は PEC3 と相性がありうる</li>
+            <li>ただし、PEC3向けに重要な定量データが見当たらない</li>
+          </ul>
+        </div>
+        <div class="big-callout">
+          <h3>不足しているデータ</h3>
+          <p>
+            260℃耐熱の実測、1310/1550nm帯の損失、CTE・寸法安定性の数値が未確認。
+            そのため現段階では、<strong>「光学部材としての可能性はあるが、PEC3向けの判断材料が不足」</strong>
+            と整理するのが妥当。
+          </p>
+        </div>
+      </div>
+      <p class="quote">光学樹脂であること自体は強みだが、PEC3で必要な数値裏付けがまだ足りない。</p>
+      <div class="slide-footer">
+        <div class="footer-note">この材料は期待値で語りすぎず、「可能性あり、ただし定量データ不足」という慎重な表現が安全。</div>
+        <div class="page">5</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">次に必要な調査</div>
+        <h2>最終判断のために埋めるべき空白</h2>
+      </div>
+      <div class="slide-body">
+        <div class="three-step">
+          <article class="step">
+            <div class="num">1</div>
+            <h3>BT樹脂系</h3>
+            <p>260℃ピークの具体的リフロープロファイル、剥離・反り・界面信頼性の評価。</p>
+          </article>
+          <article class="step">
+            <div class="num">2</div>
+            <h3>OPE</h3>
+            <p>1310/1550nm帯での導波路損失、光学導波材料としての適合性評価。</p>
+          </article>
+          <article class="step">
+            <div class="num">3</div>
+            <h3>ユピゼータEP</h3>
+            <p>260℃耐熱、近赤外透過・吸収、CTE・寸法安定性の定量データ取得。</p>
+          </article>
+        </div>
+        <div class="panel" style="margin-top: 18px;">
+          <h3>調査メッセージ</h3>
+          <p>
+            現状の公開情報では、3材料とも PEC3 にそのまま適用可能と断定するには不足がある。
+            特に <strong>1310/1550nmの損失データ</strong> が大きな空白で、ここを埋めることが最優先。
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">「何が足りないか」が明確なので、次段階の共同研究や企業ヒアリングの論点にもつなげやすい。</div>
+        <div class="page">6</div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="slide-header">
+        <div class="eyebrow">3分まとめ</div>
+        <h2>発表時の締めの一枚</h2>
+      </div>
+      <div class="slide-body grid-2">
+        <article class="summary-card">
+          <h3>一言でいうと</h3>
+          <p>
+            <strong>OPE は高温耐性と CTE で一歩先、BT は基板材料として有望、ユピゼータEP は光学樹脂として可能性あり。</strong>
+            ただし、3材料とも PEC3 の決め手になる 1310/1550nm 帯データが不足している。
+          </p>
+        </article>
+        <article class="summary-card">
+          <h3>伝えたい結論</h3>
+          <p>
+            したがって現時点では、「MGC材料は PEC3 候補として面白いが、即適用可能とまでは言えない。
+            次は光損失と高温実装の定量評価を詰めるべき」という整理になる。
+          </p>
+        </article>
+      </div>
+      <div class="slide-body" style="margin-top: 18px;">
+        <div class="big-callout">
+          <h3>発表用の締め文</h3>
+          <p>
+            「公開情報だけで最も推しやすいのは OPE です。一方で、PEC3に必要な近赤外光学データは3材料とも不足しています。
+            今後は光損失と高温実装信頼性の定量データを集めることで、材料選定を一段進められます。」
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <div class="footer-note">そのまま読み上げても通るように、結論文をスライド内に埋め込んでいる。</div>
+        <div class="page">7</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
