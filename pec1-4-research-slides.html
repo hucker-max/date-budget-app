@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PEC1-4 リサーチ結果と材料課題</title>
+  <style>
+    :root {
+      --bg: #f3efe7;
+      --paper: rgba(255, 252, 247, 0.94);
+      --ink: #1e2935;
+      --muted: #5b6770;
+      --line: rgba(30, 41, 53, 0.12);
+      --navy: #163a59;
+      --teal: #16615b;
+      --gold: #b7791f;
+      --rose: #b63d32;
+      --sky: #dfeaf4;
+      --mint: #def3ec;
+      --sand: #f8e8c7;
+      --blush: #f7ddda;
+      --shadow: 0 18px 48px rgba(22, 58, 89, 0.14);
+      --radius: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(22, 58, 89, 0.12), transparent 30%),
+        radial-gradient(circle at right bottom, rgba(22, 97, 91, 0.12), transparent 24%),
+        linear-gradient(180deg, #f7f3ec 0%, #ece4d6 100%);
+    }
+
+    .deck {
+      width: min(1280px, calc(100% - 36px));
+      margin: 26px auto 42px;
+      display: grid;
+      gap: 26px;
+    }
+
+    .slide {
+      min-height: min(720px, calc(100vh - 52px));
+      background: var(--paper);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px 38px 32px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .slide::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(22, 58, 89, 0.06), transparent 36%),
+        linear-gradient(315deg, rgba(22, 97, 91, 0.06), transparent 34%);
+      pointer-events: none;
+    }
+
+    .slide > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(22, 58, 89, 0.08);
+      color: var(--navy);
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 5vw, 3.7rem);
+      line-height: 1.08;
+      max-width: 11em;
+      margin-top: 14px;
+    }
+
+    h2 {
+      font-size: clamp(1.7rem, 3vw, 2.45rem);
+      line-height: 1.14;
+      margin-top: 8px;
+    }
+
+    .lead {
+      max-width: 62rem;
+      font-size: clamp(1rem, 1.8vw, 1.18rem);
+      line-height: 1.8;
+      color: var(--muted);
+    }
+
+    .hero-grid,
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero-grid {
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: stretch;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel,
+    .metric,
+    .summary,
+    .lane,
+    .material {
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px 22px;
+    }
+
+    .big-callout {
+      background: linear-gradient(135deg, rgba(22, 58, 89, 0.98), rgba(22, 97, 91, 0.94));
+      color: #fff;
+      border-radius: 28px;
+      padding: 24px 26px;
+    }
+
+    .big-callout p {
+      color: rgba(255, 255, 255, 0.88);
+      line-height: 1.75;
+      margin-top: 10px;
+    }
+
+    .panel h3,
+    .metric h3,
+    .summary h3,
+    .lane h3,
+    .material h3 {
+      font-size: 1.06rem;
+      margin-bottom: 12px;
+    }
+
+    .panel p,
+    .metric p,
+    .summary p,
+    .lane p,
+    .material p {
+      color: var(--muted);
+      line-height: 1.72;
+      font-size: 0.97rem;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 1.15em;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .tag.base { background: var(--sky); color: var(--navy); }
+    .tag.good { background: var(--mint); color: var(--teal); }
+    .tag.warn { background: var(--sand); color: var(--gold); }
+    .tag.risk { background: var(--blush); color: var(--rose); }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .roadmap-step {
+      border-radius: 22px;
+      padding: 18px 18px 16px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .roadmap-step strong {
+      display: block;
+      color: var(--navy);
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .roadmap-step p {
+      color: var(--muted);
+      line-height: 1.72;
+      font-size: 0.96rem;
+    }
+
+    .comparison {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid var(--line);
+    }
+
+    .comparison th,
+    .comparison td {
+      text-align: left;
+      vertical-align: top;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.95rem;
+      line-height: 1.68;
+    }
+
+    .comparison th {
+      width: 16%;
+      color: var(--navy);
+      background: rgba(22, 58, 89, 0.06);
+      font-weight: 800;
+    }
+
+    .comparison tr:last-child th,
+    .comparison tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: auto;
+      padding-top: 10px;
+    }
+
+    .footer .page {
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .roadmap {
+        grid-template-columns: 1fr;
+      }
+
+      .slide {
+        min-height: auto;
+        padding: 26px 22px 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide">
+      <div class="eyebrow">PEC1-4 / 光電融合 / 材料課題</div>
+      <div class="hero-grid">
+        <div>
+          <h1>PEC1-4のリサーチ結果と材料課題</h1>
+          <p class="lead">
+            目的は、光電融合が「どこまでコンピュータに近づく技術なのか」を段階ごとに整理し、
+            各段階で何を実現したいのか、材料面ではどこが難しそうかを簡単に俯瞰することです。
+          </p>
+        </div>
+        <div class="big-callout">
+          <h3>今回の見方</h3>
+          <p>
+            PEC-1からPEC-4へ進むほど、光はネットワークから装置内部、パッケージ近傍、チップ内部へ近づきます。
+            そのぶん、通信理論よりも材料・実装・熱・信頼性の問題が強く効いてきます。
+          </p>
+        </div>
+      </div>
+      <div class="roadmap">
+        <div class="roadmap-step">
+          <strong>PEC-1</strong>
+          <p>ネットワークの光化。遠くを低損失・大容量でつなぐ段階。</p>
+        </div>
+        <div class="roadmap-step">
+          <strong>PEC-2</strong>
+          <p>ボード間の光化。装置内通信の電力を下げたい段階。</p>
+        </div>
+        <div class="roadmap-step">
+          <strong>PEC-3</strong>
+          <p>パッケージ間の光化。材料と実装が主戦場になりやすい段階。</p>
+        </div>
+        <div class="roadmap-step">
+          <strong>PEC-4</strong>
+          <p>ダイ間・チップ内の光化。将来像が強く、接合と熱が鍵になりそうな段階。</p>
+        </div>
+      </div>
+      <div class="footer">
+        <span>卒業研究向けの簡易まとめ</span>
+        <span class="page">1 / 6</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">PEC-1 / PEC-2</div>
+      <h2>外のネットワークから装置内部へ光を入れる</h2>
+      <div class="grid-2">
+        <article class="lane">
+          <h3>PEC-1で技術としてやりたいこと</h3>
+          <p>データセンター間・サーバ間の大容量通信を、低消費電力・低遅延で成立させたい。</p>
+          <div class="tag-row">
+            <span class="tag base">石英ファイバ</span>
+            <span class="tag base">シリカ PLC / AWG</span>
+            <span class="tag base">Si フォトニクス</span>
+            <span class="tag base">InP 系</span>
+          </div>
+          <ul>
+            <li>長距離での伝送損失を抑える</li>
+            <li>波長分離と多重伝送を安定に行う</li>
+            <li>耐湿・耐熱・長期安定性が重要</li>
+          </ul>
+        </article>
+        <article class="lane">
+          <h3>PEC-2で技術としてやりたいこと</h3>
+          <p>装置内のボード間配線を光化し、Switch ASIC近傍まで optical engine を寄せて通信電力を下げたい。</p>
+          <div class="tag-row">
+            <span class="tag good">Si / SiO2 / InP</span>
+            <span class="tag good">SiOx 導波路</span>
+            <span class="tag warn">接着材</span>
+            <span class="tag warn">コネクタ材</span>
+          </div>
+          <ul>
+            <li>近接実装で熱と接合が効いてくる</li>
+            <li>アライメントとコネクタ小型化が課題</li>
+            <li>通信材料に加えて実装材料が重要になる</li>
+          </ul>
+        </article>
+      </div>
+      <div class="summary">
+        <h3>簡単に言うと</h3>
+        <p>
+          PEC-1は「光通信材料」が主役で、PEC-2は「光通信材料 + 実装材料」が主役です。
+          ここから光電融合は、通信技術だけでなく計算機実装の技術になっていきます。
+        </p>
+      </div>
+      <div class="footer">
+        <span>PEC-1は遠距離、PEC-2は装置内部</span>
+        <span class="page">2 / 6</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">PEC-3</div>
+      <h2>パッケージ間を光でつなぎたいが、材料課題が一気に重くなる</h2>
+      <div class="grid-2">
+        <article class="panel">
+          <h3>技術としてやりたいこと</h3>
+          <ul>
+            <li>CPU / GPU などのパッケージ間通信を光化したい</li>
+            <li>短距離・高密度・低消費電力の接続を成立させたい</li>
+            <li>Si フォトニクスと膜型 III-V を近接統合した光 I/O を実装したい</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>材料的な課題</h3>
+          <ul>
+            <li>熱で光結合条件や波長が変わる</li>
+            <li>CTE差と反りでアライメントがずれる</li>
+            <li>1310 / 1550nm 帯の損失が導波性能に効く</li>
+            <li>リフロー、熱サイクル、剥離、量産性まで同時に見る必要がある</li>
+          </ul>
+        </article>
+      </div>
+      <table class="comparison">
+        <tr>
+          <th>層の見方</th>
+          <td>Siフォトニクス光回路 / InP系膜型活性層 / 低屈折率クラッド / 放熱層 / 接着・封止材</td>
+        </tr>
+        <tr>
+          <th>研究の軸</th>
+          <td>熱・反り・光損失・信頼性・量産性を同時に扱うこと</td>
+        </tr>
+        <tr>
+          <th>印象</th>
+          <td>PEC-3は、光電融合の中でも最も「材料・実装・評価」に落とし込みやすい段階</td>
+        </tr>
+      </table>
+      <div class="footer">
+        <span>卒研テーマとして一番自然に切り出しやすい領域</span>
+        <span class="page">3 / 6</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">PEC-4</div>
+      <h2>ダイ間・チップ内まで光を持ち込みたいが、仮説色が強い</h2>
+      <div class="grid-2">
+        <article class="panel">
+          <h3>技術としてやりたいこと</h3>
+          <ul>
+            <li>die-to-die や chip内 optical layer を成立させたい</li>
+            <li>チップ内部の信号移動そのものを光へ寄せたい</li>
+            <li>将来的には core-to-core optical transmission まで視野に入る</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>材料的な課題</h3>
+          <ul>
+            <li>bonding の位置ずれ・接合信頼性がすぐ性能に効く</li>
+            <li>optical layer と electrical layer の熱干渉が起きやすい</li>
+            <li>応力、封止、長期信頼性まで含めた積層設計が必要</li>
+            <li>実装像はまだ仮説が多く、今後の検証が必要</li>
+          </ul>
+        </article>
+      </div>
+      <div class="grid-3">
+        <article class="metric">
+          <h3>想定材料</h3>
+          <p>Si / SiN 導波路、InP 薄膜 or Ge / Si、低k / クラッド、Cu / SiCN bonding、熱拡散材。</p>
+        </article>
+        <article class="metric">
+          <h3>強く効きそうな課題</h3>
+          <p>導波路そのものより、die-to-die の bonding 層と熱マネジメントが律速になる可能性があります。</p>
+        </article>
+        <article class="metric">
+          <h3>いまの見立て</h3>
+          <p>全面光化より、まずは I/O タイルや chiplet 境界から部分光化される方が自然そうです。</p>
+        </article>
+      </div>
+      <div class="footer">
+        <span>PEC-4は公式 + 妥当な実装仮説として見る段階</span>
+        <span class="page">4 / 6</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">MGC材料</div>
+      <h2>MGC材料に引きつけると、役割ごとに見方が変わる</h2>
+      <div class="grid-3">
+        <article class="material">
+          <h3>OPE</h3>
+          <p>高温耐性と CTE の公開エビデンスは比較的強いです。</p>
+          <div class="tag-row">
+            <span class="tag good">高温耐性</span>
+            <span class="tag good">CTE</span>
+            <span class="tag risk">近赤外損失不明</span>
+          </div>
+          <ul>
+            <li>高温実装近傍の電気系材料としては有望</li>
+            <li>光導波路材料としては判断材料不足</li>
+          </ul>
+        </article>
+        <article class="material">
+          <h3>BT樹脂系</h3>
+          <p>基板材料としては自然に有望ですが、PEC-3向け光学評価が弱いです。</p>
+          <div class="tag-row">
+            <span class="tag base">基板材料</span>
+            <span class="tag warn">反り評価不足</span>
+            <span class="tag risk">光学損失不明</span>
+          </div>
+          <ul>
+            <li>パッケージ基材・電気配線側に向いていそう</li>
+            <li>260℃ピークや剥離データがほしい</li>
+          </ul>
+        </article>
+        <article class="material">
+          <h3>ユピゼータEP</h3>
+          <p>光学樹脂・光学部材候補としては面白いですが、PEC-3向け定量データが不足しています。</p>
+          <div class="tag-row">
+            <span class="tag base">光学樹脂</span>
+            <span class="tag warn">耐熱不足</span>
+            <span class="tag risk">CTE不明</span>
+          </div>
+          <ul>
+            <li>レンズ・光学部材寄りに見る方が自然</li>
+            <li>近赤外・耐熱・寸法安定性の数値が必要</li>
+          </ul>
+        </article>
+      </div>
+      <div class="summary">
+        <h3>簡単に言うと</h3>
+        <p>
+          3材料ともそのまま PEC-3 に使えるとはまだ言い切れません。
+          ただし、OPE は実装材料寄り、BT は基板材料寄り、ユピゼータEP は光学部材寄り、という見方はしやすくなっています。
+        </p>
+      </div>
+      <div class="footer">
+        <span>1材料で全部を担うより、役割別に見る方が整理しやすい</span>
+        <span class="page">5 / 6</span>
+      </div>
+    </section>
+
+    <section class="slide">
+      <div class="eyebrow">まとめ</div>
+      <h2>研究としては「どの材料がどの役割を担えるか」を見極める話</h2>
+      <div class="grid-2">
+        <article class="big-callout">
+          <h3>技術として何をしたいのか</h3>
+          <p>
+            光を、ネットワークから装置内部、パッケージ間、最終的にはダイ間・チップ内へ近づけて、
+            データ移動の電力と帯域の問題を解きたい。
+          </p>
+        </article>
+        <article class="panel">
+          <h3>材料研究としての問い</h3>
+          <ul>
+            <li>PEC-3 では何を満たせば材料候補と言えるのか</li>
+            <li>どの材料が基板材・導波路材・光学部材・接着材のどこに向くのか</li>
+            <li>何のデータが足りないと最終判断できないのか</li>
+          </ul>
+        </article>
+      </div>
+      <table class="comparison">
+        <tr>
+          <th>重要評価軸</th>
+          <td>260℃リフロー耐性 / 1310・1550nm 光学損失 / CTE・寸法安定性</td>
+        </tr>
+        <tr>
+          <th>次にやること</th>
+          <td>公開エビデンス比較、評価項目と測定方法の対応付け、MGCへの質問設計</td>
+        </tr>
+        <tr>
+          <th>研究の着地点</th>
+          <td>光電融合を成立させる材料条件を整理し、候補材料がどの役割なら使えそうかを見極めること</td>
+        </tr>
+      </table>
+      <div class="footer">
+        <span>PEC-3が当面の主戦場、PEC-4はその先の延長線</span>
+        <span class="page">6 / 6</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
